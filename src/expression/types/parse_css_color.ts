@@ -176,7 +176,7 @@ function validateNumbers(array: number[]): boolean {
  * @example
  * copy(`{\n${[...document.querySelector('.named-color-table tbody').children].map((tr) => `${tr.cells[2].textContent.trim()}: [${tr.cells[4].textContent.trim().split(/\s+/).join(', ')}],`).join('\n')}\n}`);
  */
-const namedColors: Record<string, [number, number, number]> = {
+export const namedColors: Record<string, [number, number, number]> = {
     aliceblue: [240, 248, 255],
     antiquewhite: [250, 235, 215],
     aqua: [0, 255, 255],
