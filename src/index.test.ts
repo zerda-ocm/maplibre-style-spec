@@ -1,5 +1,6 @@
 
 import * as spec from '.';
+import {describe, test, expect} from 'vitest';
 
 describe('style-spec', () => {
     ['v8', 'latest'].forEach((version) => {
@@ -68,9 +69,13 @@ function validSchema(k, v, obj, ref, version, kind) {
         'resolvedImage',
         'promoteId',
         'padding',
+        'numberArray',
+        'colorArray',
         'variableAnchorOffsetCollection',
         'sprite',
-        'projectionDefinition'
+        'projectionDefinition',
+        'state',
+        'fontFaces'
     ]);
     const keys = [
         'default',

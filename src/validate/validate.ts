@@ -23,11 +23,14 @@ import {validateString} from './validate_string';
 import {validateFormatted} from './validate_formatted';
 import {validateImage} from './validate_image';
 import {validatePadding} from './validate_padding';
+import {validateNumberArray} from './validate_number_array';
+import {validateColorArray} from './validate_color_array';
 import {validateVariableAnchorOffsetCollection} from './validate_variable_anchor_offset_collection';
 import {validateSprite} from './validate_sprite';
 import {ValidationError} from '../error/validation_error';
 import {validateProjection} from './validate_projection';
 import {validateProjectionDefinition} from './validate_projectiondefinition';
+import {validateState} from './validate_state';
 
 const VALIDATORS = {
     '*'() {
@@ -53,8 +56,11 @@ const VALIDATORS = {
     'formatted': validateFormatted,
     'resolvedImage': validateImage,
     'padding': validatePadding,
+    'numberArray': validateNumberArray,
+    'colorArray': validateColorArray,
     'variableAnchorOffsetCollection': validateVariableAnchorOffsetCollection,
     'sprite': validateSprite,
+    'state': validateState
 };
 
 /**

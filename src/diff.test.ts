@@ -1,5 +1,6 @@
 import {diff} from './diff';
 import {StyleSpecification} from './types.g';
+import {describe, test, expect} from 'vitest';
 
 describe('diff', () => {
     test('layers id equal', () => {
@@ -260,6 +261,16 @@ describe('diff', () => {
         } as StyleSpecification, {
             layers: [{id: 'a', metadata: {'maplibre:group': 'Another Name'}}]
         } as StyleSpecification)).toEqual([]);
+    });
+
+    test('set state', () => {
+        expect(diff({
+            state: {foo: 1}
+        } as any as StyleSpecification, {
+            state: {foo: 2}
+        } as any as StyleSpecification)).toEqual([
+            {command: 'setGlobalState', args: [{foo: 2}]}
+        ]);
     });
 
     test('set center', () => {

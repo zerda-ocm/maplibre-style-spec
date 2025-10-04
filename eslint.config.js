@@ -1,7 +1,7 @@
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
-import stylisticTs from '@stylistic/eslint-plugin-ts'
+import stylistic from "@stylistic/eslint-plugin";
 import jsdoc from "eslint-plugin-jsdoc";
-import jest from "eslint-plugin-jest";
+import vitest from "@vitest/eslint-plugin";
 import globals from "globals";
 import tsParser from "@typescript-eslint/parser";
 
@@ -12,9 +12,9 @@ export default [{
     files: ["**/*.ts"],
     plugins: {
         "@typescript-eslint": typescriptEslint,
-        "@stylistic": stylisticTs,
+        "@stylistic": stylistic,
         jsdoc,
-        jest,
+        vitest,
     },
 
     linterOptions: {
@@ -71,11 +71,6 @@ export default [{
         "no-lonely-if": "off",
         "no-new": "off",
 
-        "no-restricted-properties": [2, {
-            object: "Object",
-            property: "assign",
-        }],
-
         "no-unused-vars": "off",
         "no-warning-comments": "error",
         "object-curly-spacing": ["error", "never"],
@@ -108,22 +103,20 @@ export default [{
         "jsdoc/require-returns-description": "warn",
         "jsdoc/check-alignment": "error",
         "jsdoc/check-line-alignment": "error",
-        "jest/no-commented-out-tests": "error",
-        "jest/no-disabled-tests": "warn",
-        "jest/no-focused-tests": "error",
-        "jest/prefer-to-contain": "warn",
-        "jest/prefer-to-have-length": "warn",
-        "jest/valid-expect": "error",
-        "jest/prefer-to-be": "warn",
-        "jest/no-alias-methods": "warn",
-        "jest/no-interpolation-in-snapshots": "warn",
+        "vitest/no-commented-out-tests": "error",
+        "vitest/no-disabled-tests": "warn",
+        "vitest/no-focused-tests": "error",
+        "vitest/prefer-to-contain": "warn",
+        "vitest/prefer-to-have-length": "warn",
+        "vitest/valid-expect": "error",
+        "vitest/prefer-to-be": "warn",
+        "vitest/no-alias-methods": "warn",
+        "vitest/no-interpolation-in-snapshots": "warn",
 
-        "jest/no-large-snapshots": ["warn", {
+        "vitest/no-large-snapshots": ["warn", {
             maxSize: 50,
             inlineMaxSize: 20,
-        }],
-
-        "jest/no-deprecated-functions": "warn",
+        }]
     },
 }, {
     files: ["test/**"],

@@ -11,6 +11,8 @@ import {featureFilter, isExpressionFilter} from './feature_filter';
 import {convertFilter} from './feature_filter/convert';
 import {Color} from './expression/types/color';
 import {Padding} from './expression/types/padding';
+import {NumberArray} from './expression/types/number_array';
+import {ColorArray} from './expression/types/color_array';
 import {VariableAnchorOffsetCollection} from './expression/types/variable_anchor_offset_collection';
 import {Formatted, FormattedSection} from './expression/types/formatted';
 import {createFunction, isFunction} from './function';
@@ -34,7 +36,7 @@ import {typeOf} from './expression/values';
 import {FormatExpression} from './expression/definitions/format';
 import {Literal} from './expression/definitions/literal';
 import {CompoundExpression} from './expression/compound_expression';
-import {ColorSpecification, PaddingSpecification, ProjectionDefinitionSpecification, VariableAnchorOffsetCollectionSpecification} from './types.g';
+import {ColorSpecification, PaddingSpecification, NumberArraySpecification, ColorArraySpecification, ProjectionDefinitionSpecification, VariableAnchorOffsetCollectionSpecification} from './types.g';
 import {format} from './format';
 import {validate} from './validate/validate';
 import {migrate} from './migrate';
@@ -42,7 +44,7 @@ import {classifyRings} from './util/classify_rings';
 import {ProjectionDefinition} from './expression/types/projection_definition';
 
 type ExpressionType = 'data-driven' | 'cross-faded' | 'cross-faded-data-driven' | 'color-ramp' | 'data-constant' | 'constant';
-type ExpressionParameters = Array<'zoom' | 'feature' | 'feature-state' | 'heatmap-density' | 'line-progress'>;
+type ExpressionParameters = Array<'zoom' | 'feature' | 'feature-state' | 'heatmap-density' | 'elevation' | 'line-progress'>;
 
 type ExpressionSpecificationDefinition = {
     interpolated: boolean;
@@ -105,6 +107,18 @@ export type StylePropertySpecification = {
     transition: boolean;
     default?: PaddingSpecification;
 } | {
+    type: 'numberArray';
+    'property-type': ExpressionType;
+    expression?: ExpressionSpecificationDefinition;
+    transition: boolean;
+    default?: NumberArraySpecification;
+} | {
+    type: 'colorArray';
+    'property-type': ExpressionType;
+    expression?: ExpressionSpecificationDefinition;
+    transition: boolean;
+    default?: ColorArraySpecification;
+} | {
     type: 'variableAnchorOffsetCollection';
     'property-type': ExpressionType;
     expression?: ExpressionSpecificationDefinition;
@@ -150,6 +164,8 @@ export {
     Step,
     CompoundExpression,
     Padding,
+    NumberArray,
+    ColorArray,
     VariableAnchorOffsetCollection,
     Formatted,
     ResolvedImage,

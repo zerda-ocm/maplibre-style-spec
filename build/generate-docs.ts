@@ -1,6 +1,6 @@
 import v8 from '../src/reference/v8.json' with { type: 'json' };
 import fs from 'fs';
-import jsonStringify from 'json-stringify-pretty-compact';
+import {formatJSON} from './util';
 
 /**
  * This script generates markdown documentation from the JSON schema.
@@ -8,6 +8,18 @@ import jsonStringify from 'json-stringify-pretty-compact';
  */
 
 const BASE_PATH = 'docs';
+
+type JsonExpressionSyntax = {
+    overloads: {
+        parameters: string[];
+        'output-type': string;
+    }[];
+    parameters?: {
+        name: string;
+        type?: string;
+        description?: string;
+    }[];
+}
 
 type JsonSdkSupport = {
     [info: string]: {
@@ -20,7 +32,7 @@ type JsonSdkSupport = {
 type JsonObject = {
     required?: boolean;
     units?: string;
-    default?: string | number | boolean;
+    default?: string | number | boolean | {};
     type: string;
     doc: string;
     requires?: any[];
@@ -58,18 +70,6 @@ function topicElement(key: string, value: JsonObject): boolean {
         key !== 'sprite' &&
         key !== 'layers' &&
         key !== 'sources';
-
-}
-
-/**
- * @param obj - object to be formatted
- * @returns formatted JSON
- */
-function formatJSON(obj: any): string {
-    return jsonStringify(obj, {
-        indent: 4,
-        maxLength: 60
-    });
 }
 
 /**
@@ -79,7 +79,7 @@ function formatJSON(obj: any): string {
  * @returns the markdown string
  */
 function exampleToMarkdown(key: string, example: string | object | number): string {
-    return codeBlockMarkdown(`${key}: ${formatJSON(example)}`);
+    return codeBlockMarkdown(`"${key}": ${formatJSON(example)}`);
 }
 
 function codeBlockMarkdown(code: string, language = 'json'): string {
@@ -119,7 +119,32 @@ function sdkSupportToMarkdown(support: JsonSdkSupport): string {
         markdown += `|${row}|${supportCell(supportMatrix.js)}|${supportCell(supportMatrix.android)}|${supportCell(supportMatrix.ios)}|\n`;
     }
     return markdown;
+}
 
+/**
+ * Converts the expression syntax object to markdown format.
+ * @param key - the expression name
+ * @param syntax - the expression syntax object in the style spec
+ * @returns the markdown string for the expression's syntax section
+ */
+function expressionSyntaxToMarkdown(key: string, syntax: JsonExpressionSyntax) {
+    let markdown = '\nSyntax:\n';
+    const codeBlockLines = syntax.overloads.map((overload) => {
+        return `[${[`"${key}"`, ...overload.parameters].join(', ')}]: ${overload['output-type']}`;
+    });
+    markdown += `${codeBlockMarkdown(codeBlockLines.join('\n'), 'js')}\n`;
+    for (const parameter of syntax.parameters ?? []) {
+        markdown += `- \`${parameter.name}\``;
+        if (parameter.type) {
+            const type = parameter.type.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+            markdown += `: *${type}*`;
+        }
+        if (parameter.description) {
+            markdown += ` — ${parameter.description}`;
+        }
+        markdown += '\n';
+    }
+    return markdown;
 }
 
 /**
@@ -175,6 +200,8 @@ function typeToMarkdownLink(type: string): string {
         case 'formatted':
         case 'resolvedimage':
         case 'padding':
+        case 'numberarray':
+        case 'colorarray':
             return ` [${type}](types.md#${type.toLocaleLowerCase()})`;
         case 'filter':
             return ` [${type}](expressions.md)`;
@@ -214,7 +241,11 @@ function convertPropertyToMarkdown(key: string, value: JsonObject, keyPrefix = '
     }
 
     if (value.minimum !== undefined || value.maximum !== undefined) {
-        markdown += ` in range ${formatRange(value.minimum, value.maximum)}`;
+        if (value.type === 'numberArray') {
+            markdown += ` with value(s) in range ${formatRange(value.minimum, value.maximum)}`;
+        } else {
+            markdown += ` in range ${formatRange(value.minimum, value.maximum)}`;
+        }
     }
 
     markdown += '. ';
@@ -227,7 +258,7 @@ function convertPropertyToMarkdown(key: string, value: JsonObject, keyPrefix = '
         markdown += `Units in ${value.units}. `;
     }
     if (value.default !== undefined) {
-        markdown += `Defaults to \`${value.default}\`. `;
+        markdown += `Defaults to \`${JSON.stringify(value.default)}\`. `;
     }
     if (value.requires) {
         markdown += requiresToMarkdown(value.requires);
@@ -324,7 +355,7 @@ function createLayersContent() {
 function createSourcesContent() {
     const sourcesExtraData = {
         vector: {
-            doc: 'A vector tile source. Tiles must be in [Mapbox Vector Tile format](https://github.com/mapbox/vector-tile-spec). All geometric coordinates in vector tiles must be between \`-1 * extent\` and \`(extent * 2) - 1\` inclusive. All layers that use a vector source must specify a [`source-layer`](layers.md#source-layer) value.',
+            doc: 'A vector tile source. Tiles must be in [Mapbox Vector Tile format](https://github.com/mapbox/vector-tile-spec). All geometric coordinates in vector tiles must be between \`-1 * extent\` and \`(extent * 2) - 1\` inclusive. All layers that use a vector source must specify a [`source-layer`](layers.md#source-layer) value. Note that features are only rendered within their originating tile, which may lead to visual artifacts when large values for width, radius, size or offset are specified. To mitigate rendering issues, either reduce the value of the property causing the artifact or, if you have control over the tile generation process, increase the buffer size to ensure that features are fully rendered within the tile.',
             example: {
                 'maplibre-streets': {
                     'type': 'vector',
@@ -506,9 +537,8 @@ function createExpressionsContent() {
             }
             content += `\n### ${key}\n`;
             content += `${value.doc}\n`;
-            value.example.syntax.method.unshift(`"${key}"`);
-            content += `\nSyntax:\n${codeBlockMarkdown(`[${value.example.syntax.method.join(', ')}]: ${value.example.syntax.result}`, 'js')}\n`;
-            content += `\nExample:\n${codeBlockMarkdown(`"some-property": ${formatJSON(value.example.value)}`)}\n`;
+            content += expressionSyntaxToMarkdown(key, value.syntax);
+            content += `\nExample:\n${codeBlockMarkdown(`"some-property": ${formatJSON(value.example)}`)}\n`;
             content += sdkSupportToMarkdown(value['sdk-support'] as any);
             content += '\n';
         }
@@ -534,6 +564,11 @@ function createMainTopics() {
                 content += convertPropertyToMarkdown(subKey, subValue as JsonObject);
             }
         }
+        if (value['sdk-support']) {
+            content += '\n---\n';
+            content += sdkSupportToMarkdown(value['sdk-support']);
+        }
+
         fs.writeFileSync(`${BASE_PATH}/${key}.md`, content);
     }
 }

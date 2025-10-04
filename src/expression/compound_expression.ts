@@ -21,6 +21,7 @@ import {Assertion} from './definitions/assertion';
 import {Coercion} from './definitions/coercion';
 import {Var} from './definitions/var';
 import {Distance} from './definitions/distance';
+import {GlobalState} from './definitions/global_state';
 
 import type {Expression, ExpressionRegistry} from './expression';
 import type {Value} from './values';
@@ -287,6 +288,11 @@ CompoundExpression.register(expressions, {
         NumberType,
         [],
         (ctx) => ctx.globals.heatmapDensity || 0
+    ],
+    'elevation': [
+        NumberType,
+        [],
+        (ctx) => ctx.globals.elevation || 0
     ],
     'line-progress': [
         NumberType,
@@ -666,6 +672,8 @@ function isExpressionConstant(expression: Expression) {
         return false;
     } else if (expression instanceof Distance) {
         return false;
+    } else if (expression instanceof GlobalState) {
+        return false;
     }
 
     const isTypeAnnotation = expression instanceof Coercion ||
@@ -692,7 +700,7 @@ function isExpressionConstant(expression: Expression) {
 
     return isFeatureConstant(expression) &&
            isGlobalPropertyConstant(expression,
-               ['zoom', 'heatmap-density', 'line-progress', 'accumulated', 'is-supported-script']);
+               ['zoom', 'heatmap-density', 'elevation', 'line-progress', 'accumulated', 'is-supported-script']);
 }
 
 function isFeatureConstant(e: Expression) {

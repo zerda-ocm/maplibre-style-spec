@@ -1,14 +1,93 @@
 ## main
 
 ### ✨ Features and improvements
+- Add optional `encoding` property to vector `source` to allow for MapLibre Tile vector sources
 - _...Add new stuff here..._
 
 ### 🐞 Bug fixes
+- _...Add new stuff here..._
+
+## 24.2.0
+
+### ✨ Features and improvements
+
+- Add note regarding visual artifacts that can appear with large width/size/offset values on vector tile layers, highlight remediation options ([#4160](https://github.com/maplibre/maplibre-gl-js/issues/4160))
+- Implement data-driven styling support for `line-dasharray` ([#5812](https://github.com/mapbox/mapbox-gl-js/pull/5812))
+
+### 🐞 Bug fixes
+
+- Replace additional spread operator (`...`) due to esbuild limitations ([#1297](https://github.com/maplibre/maplibre-style-spec/pull/1297))
+
+## 24.1.1
+
+### 🐞 Bug fixes
+
+- Replace spread operator (`...`) due to esbuild limitations ([#1286](https://github.com/maplibre/maplibre-style-spec/pull/1286))
+
+## 24.1.0
+
+### ✨ Features and improvements
+
+- Added `global-state` parameter to `featureFilter` function ([#1279](https://github.com/maplibre/maplibre-style-spec/pull/1279))
+
+## 24.0.0
+
+### ✨ Features and improvements
+
+- ⚠️ Change passing `global-state` to expression from the `evaluate` function to the constructor ([#1267](https://github.com/maplibre/maplibre-style-spec/pull/1267)) - you can add an empty object for global state to overcome this.
+
+### 🐞 Bug fixes
+
+## 23.3.0
+
+### ✨ Features and improvements
+
+- Add new layer type: `color-relief ([#1067](https://github.com/maplibre/maplibre-style-spec/issues/1067))
+
+### 🐞 Bug fixes
+
+- Add missing `global-state` expression typing ([#1130](https://github.com/maplibre/maplibre-style-spec/pull/1130))
+
+## 23.2.3
+
+### ✨ Features and improvements
+
+- Restructure expression syntax documentation ([#1112](https://github.com/maplibre/maplibre-style-spec/pull/1112))
+- Add global state ref support ([#1120](https://github.com/maplibre/maplibre-style-spec/pull/1120))
+
+## 23.2.2
+
+### 🐞 Bug fixes
+
+- Fix state validation - no error case ([#1109](https://github.com/maplibre/maplibre-style-spec/pull/1109))
+
+## 23.2.1
+
+### 🐞 Bug fixes
+
+- Validate that `numberArray` and `colorArray` values are non-empty ([#1094](https://github.com/maplibre/maplibre-style-spec/pull/1094))
+
+## 23.2.0
+
+### ✨ Features and improvements
+
+- `glyphs` is now optional even if a symbol layer specifies `text-field`; if it is unset, `text-font` is interpreted as a fallback font list ([#1068](https://github.com/maplibre/maplibre-style-spec/pull/1068))
+- `hillshade` layer now supports multiple methods, and the `multidirectional` method supports array values for illumination properties ([#1088](https://github.com/maplibre/maplibre-style-spec/pull/1088))
+- Add `global-state` expression and `state` root property ([#1044](https://github.com/maplibre/maplibre-style-spec/pull/1044)).
+
+### 🐞 Bug fixes
+
 - Fix RuntimeError class, make it inherited from Error ([#983](https://github.com/maplibre/maplibre-style-spec/issues/983))
+- Validate that `layers` array items are objects instead of throwing an error if not ([#1026](https://github.com/maplibre/maplibre-style-spec/pull/1026))
+- Multiple fixes related to validating and parsing of strings containing object prototype keys
+   - Fix `validate_object` crashing when object prototype keys used in style's objects ([#1028](https://github.com/maplibre/maplibre-style-spec/pull/1028))
+   - Fix `validate_color` crashing when object prototype keys used as color strings ([#1036](https://github.com/maplibre/maplibre-style-spec/pull/1036))
+   - Fix color coercion in expressions (e.g. `to_color`) producing invalid colors when object prototype keys used as color strings ([#1036](https://github.com/maplibre/maplibre-style-spec/pull/1036))
 
 ## 23.1.0
 
 ### ✨ Features and improvements
+
 - Add `vertical-align` option to `format` expression ([#832](https://github.com/maplibre/maplibre-style-spec/issues/832))
 
 ## 23.0.0
@@ -26,12 +105,14 @@
 ## 22.0.0
 
 ### ✨ Features and improvements
+
 - Use named imports internally - no package entrypoints changed ([#904](https://github.com/maplibre/maplibre-style-spec/pull/904))
 - Add projection type expression syntax ([#888](https://github.com/maplibre/maplibre-style-spec/pull/888))
 
 ## 21.2.0
 
 ### ✨ Features and improvements
+
 - Add `vertical-perspective` projection ([#890](https://github.com/maplibre/maplibre-style-spec/pull/890))
 
 ## 21.1.0
