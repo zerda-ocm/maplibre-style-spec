@@ -1,0 +1,58 @@
+import v8Spec from './reference/v8.json' with { type: 'json' };
+const v8 = v8Spec;
+import latest from './reference/latest';
+import { derefLayers } from './deref';
+import { diff } from './diff';
+import { ValidationError } from './error/validation_error';
+import { ParsingError } from './error/parsing_error';
+import { StyleExpression, isExpression, isZoomExpression, createExpression, createPropertyExpression, normalizePropertyExpression, ZoomConstantExpression, ZoomDependentExpression, StylePropertyFunction } from './expression';
+import { featureFilter, isExpressionFilter } from './feature_filter';
+import { convertFilter } from './feature_filter/convert';
+import { Color } from './expression/types/color';
+import { Padding } from './expression/types/padding';
+import { NumberArray } from './expression/types/number_array';
+import { ColorArray } from './expression/types/color_array';
+import { VariableAnchorOffsetCollection } from './expression/types/variable_anchor_offset_collection';
+import { Formatted, FormattedSection } from './expression/types/formatted';
+import { createFunction, isFunction } from './function';
+import { convertFunction } from './function/convert';
+import { eachSource, eachLayer, eachProperty } from './visit';
+import { ResolvedImage } from './expression/types/resolved_image';
+import { supportsPropertyExpression } from './util/properties';
+import { EvaluationContext } from './expression/evaluation_context';
+import { FormattedType, NullType, typeToString, ColorType, ProjectionDefinitionType } from './expression/types';
+import { expressions } from './expression/definitions';
+import { Interpolate } from './expression/definitions/interpolate';
+import { interpolateFactory } from './expression/definitions/interpolate';
+import { groupByLayout } from './group_by_layout';
+import { emptyStyle } from './empty';
+import { validateStyleMin } from './validate_style.min';
+import { Step } from './expression/definitions/step';
+import { typeOf } from './expression/values';
+import { FormatExpression } from './expression/definitions/format';
+import { Literal } from './expression/definitions/literal';
+import { CompoundExpression } from './expression/compound_expression';
+import { format } from './format';
+import { validate } from './validate/validate';
+import { migrate } from './migrate';
+import { classifyRings } from './util/classify_rings';
+import { ProjectionDefinition } from './expression/types/projection_definition';
+const expression = {
+    StyleExpression,
+    StylePropertyFunction,
+    ZoomConstantExpression,
+    ZoomDependentExpression,
+    createExpression,
+    createPropertyExpression,
+    isExpression,
+    isExpressionFilter,
+    isZoomExpression,
+    normalizePropertyExpression,
+};
+const styleFunction = {
+    convertFunction,
+    createFunction,
+    isFunction
+};
+const visit = { eachLayer, eachProperty, eachSource };
+export { Interpolate, ValidationError, ParsingError, ProjectionDefinition, Color, Step, CompoundExpression, Padding, NumberArray, ColorArray, VariableAnchorOffsetCollection, Formatted, ResolvedImage, EvaluationContext, FormattedSection, StyleExpression, ZoomConstantExpression, Literal, StylePropertyFunction, ZoomDependentExpression, FormatExpression, latest, validateStyleMin, groupByLayout, emptyStyle, derefLayers, normalizePropertyExpression, isExpression, isZoomExpression, diff, supportsPropertyExpression, convertFunction, createExpression, isFunction, createFunction, createPropertyExpression, convertFilter, featureFilter, typeOf, typeToString as toString, format, validate, migrate, classifyRings, ProjectionDefinitionType, ColorType, interpolateFactory as interpolates, v8, NullType, styleFunction as function, visit, expressions, expression, FormattedType, };

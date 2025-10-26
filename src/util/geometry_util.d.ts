@@ -1,0 +1,14 @@
+import { ICanonicalTileID } from '../tiles_and_coordinates';
+export type BBox = [number, number, number, number];
+export declare const EXTENT = 8192;
+export declare function getTileCoordinates(p: GeoJSON.Position, canonical: ICanonicalTileID): [number, number];
+export declare function getLngLatFromTileCoord(coord: [number, number], canonical: ICanonicalTileID): GeoJSON.Position;
+export declare function updateBBox(bbox: BBox, coord: GeoJSON.Position): void;
+export declare function boxWithinBox(bbox1: BBox, bbox2: BBox): boolean;
+export declare function rayIntersect(p: [number, number], p1: [number, number], p2: [number, number]): boolean;
+export declare function segmentIntersectSegment(a: [number, number], b: [number, number], c: [number, number], d: [number, number]): boolean;
+export declare function lineIntersectPolygon(p1: any, p2: any, polygon: any): boolean;
+export declare function pointWithinPolygon(point: [number, number], rings: [number, number][][], trueIfOnBoundary?: boolean): boolean;
+export declare function pointWithinPolygons(point: [number, number], polygons: [number, number][][][]): boolean;
+export declare function lineStringWithinPolygon(line: [number, number][], polygon: [number, number][][]): boolean;
+export declare function lineStringWithinPolygons(line: [number, number][], polygons: [number, number][][][]): boolean;
