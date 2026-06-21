@@ -15,7 +15,9 @@ export class GlobalState implements Expression {
 
     static parse(args: ReadonlyArray<unknown>, context: ParsingContext): Expression {
         if (args.length !== 2) {
-            return context.error(`Expected 1 argument, but found ${args.length - 1} instead.`) as null;
+            return context.error(
+                `Expected 1 argument, but found ${args.length - 1} instead.`
+            ) as null;
         }
 
         const key = args[1];
@@ -25,7 +27,9 @@ export class GlobalState implements Expression {
         }
 
         if (typeof key !== 'string') {
-            return context.error(`Global state property must be string, but found ${typeof args[1]} instead.`) as null;
+            return context.error(
+                `Global state property must be string, but found ${typeof args[1]} instead.`
+            ) as null;
         }
 
         return new GlobalState(key);
@@ -36,7 +40,7 @@ export class GlobalState implements Expression {
 
         if (!globalState || Object.keys(globalState).length === 0) return null;
 
-        return getOwn(globalState, this.key);
+        return getOwn(globalState, this.key) ?? null;
     }
 
     eachChild() {}

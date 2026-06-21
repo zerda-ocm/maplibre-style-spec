@@ -1,24 +1,48 @@
-
 import {ValidationError} from '../error/validation_error';
 import {validateExpression} from './validate_expression';
 import {validateEnum} from './validate_enum';
 import {getType} from '../util/get_type';
 import {unbundle, deepUnbundle} from '../util/unbundle_jsonlint';
 import {extendBy as extend} from '../util/extend';
-import {isExpressionFilter} from '../feature_filter';
+import {
+    findMixedLegacyFilter,
+    getMixedFilterErrorMessage,
+    isExpressionFilter
+} from '../feature_filter';
 
-export function validateFilter(options) {
-    if (isExpressionFilter(deepUnbundle(options.value))) {
-        return validateExpression(extend({}, options, {
-            expressionContext: 'filter',
-            valueSpec: {value: 'boolean'}
-        }));
-    } else {
-        return validateNonExpressionFilter(options);
+function getValueAtPath(value: any, path: number[]) {
+    let current = value;
+    for (const index of path) {
+        current = current[index];
     }
+    return current;
 }
 
-function validateNonExpressionFilter(options) {
+export function validateFilter(options: any): ValidationError[] {
+    const value = deepUnbundle(options.value);
+    if (!isExpressionFilter(value)) {
+        return validateNonExpressionFilter(options);
+    }
+    const mixedLegacyDiagnostic = findMixedLegacyFilter(value);
+    if (mixedLegacyDiagnostic) {
+        const errorKey = `${options.key}${mixedLegacyDiagnostic.path.map((index) => `[${index}]`).join('')}`;
+        return [
+            new ValidationError(
+                errorKey,
+                getValueAtPath(options.value, mixedLegacyDiagnostic.path),
+                getMixedFilterErrorMessage(mixedLegacyDiagnostic.legacyFilter)
+            )
+        ];
+    }
+    return validateExpression(
+        extend({}, options, {
+            expressionContext: 'filter',
+            valueSpec: {value: 'boolean'}
+        })
+    );
+}
+
+function validateNonExpressionFilter(options: any): ValidationError[] {
     const value = options.value;
     const key = options.key;
 
@@ -29,19 +53,21 @@ function validateNonExpressionFilter(options) {
     const styleSpec = options.styleSpec;
     let type;
 
-    let errors = [];
+    let errors: ValidationError[] = [];
 
     if (value.length < 1) {
         return [new ValidationError(key, value, 'filter array must have at least 1 element')];
     }
 
-    errors = errors.concat(validateEnum({
-        key: `${key}[0]`,
-        value: value[0],
-        valueSpec: styleSpec.filter_operator,
-        style: options.style,
-        styleSpec: options.styleSpec
-    }));
+    errors = errors.concat(
+        validateEnum({
+            key: `${key}[0]`,
+            value: value[0],
+            valueSpec: styleSpec.filter_operator,
+            style: options.style,
+            styleSpec: options.styleSpec
+        })
+    );
 
     switch (unbundle(value[0])) {
         case '<':
@@ -49,13 +75,25 @@ function validateNonExpressionFilter(options) {
         case '>':
         case '>=':
             if (value.length >= 2 && unbundle(value[1]) === '$type') {
-                errors.push(new ValidationError(key, value, `"$type" cannot be use with operator "${value[0]}"`));
+                errors.push(
+                    new ValidationError(
+                        key,
+                        value,
+                        `"$type" cannot be use with operator "${value[0]}"`
+                    )
+                );
             }
         /* falls through */
         case '==':
         case '!=':
             if (value.length !== 3) {
-                errors.push(new ValidationError(key, value, `filter array for operator "${value[0]}" must have 3 elements`));
+                errors.push(
+                    new ValidationError(
+                        key,
+                        value,
+                        `filter array for operator "${value[0]}" must have 3 elements`
+                    )
+                );
             }
         /* falls through */
         case 'in':
@@ -63,21 +101,31 @@ function validateNonExpressionFilter(options) {
             if (value.length >= 2) {
                 type = getType(value[1]);
                 if (type !== 'string') {
-                    errors.push(new ValidationError(`${key}[1]`, value[1], `string expected, ${type} found`));
+                    errors.push(
+                        new ValidationError(`${key}[1]`, value[1], `string expected, ${type} found`)
+                    );
                 }
             }
             for (let i = 2; i < value.length; i++) {
                 type = getType(value[i]);
                 if (unbundle(value[1]) === '$type') {
-                    errors = errors.concat(validateEnum({
-                        key: `${key}[${i}]`,
-                        value: value[i],
-                        valueSpec: styleSpec.geometry_type,
-                        style: options.style,
-                        styleSpec: options.styleSpec
-                    }));
+                    errors = errors.concat(
+                        validateEnum({
+                            key: `${key}[${i}]`,
+                            value: value[i],
+                            valueSpec: styleSpec.geometry_type,
+                            style: options.style,
+                            styleSpec: options.styleSpec
+                        })
+                    );
                 } else if (type !== 'string' && type !== 'number' && type !== 'boolean') {
-                    errors.push(new ValidationError(`${key}[${i}]`, value[i], `string, number, or boolean expected, ${type} found`));
+                    errors.push(
+                        new ValidationError(
+                            `${key}[${i}]`,
+                            value[i],
+                            `string, number, or boolean expected, ${type} found`
+                        )
+                    );
                 }
             }
             break;
@@ -86,12 +134,14 @@ function validateNonExpressionFilter(options) {
         case 'all':
         case 'none':
             for (let i = 1; i < value.length; i++) {
-                errors = errors.concat(validateNonExpressionFilter({
-                    key: `${key}[${i}]`,
-                    value: value[i],
-                    style: options.style,
-                    styleSpec: options.styleSpec
-                }));
+                errors = errors.concat(
+                    validateNonExpressionFilter({
+                        key: `${key}[${i}]`,
+                        value: value[i],
+                        style: options.style,
+                        styleSpec: options.styleSpec
+                    })
+                );
             }
             break;
 
@@ -99,9 +149,17 @@ function validateNonExpressionFilter(options) {
         case '!has':
             type = getType(value[1]);
             if (value.length !== 2) {
-                errors.push(new ValidationError(key, value, `filter array for "${value[0]}" operator must have 2 elements`));
+                errors.push(
+                    new ValidationError(
+                        key,
+                        value,
+                        `filter array for "${value[0]}" operator must have 2 elements`
+                    )
+                );
             } else if (type !== 'string') {
-                errors.push(new ValidationError(`${key}[1]`, value[1], `string expected, ${type} found`));
+                errors.push(
+                    new ValidationError(`${key}[1]`, value[1], `string expected, ${type} found`)
+                );
             }
             break;
     }

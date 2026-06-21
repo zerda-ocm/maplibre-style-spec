@@ -4,8 +4,7 @@ MapLibre style contains values of various types, most commonly as values for the
 
 ## Color
 
-The `color` type is a color in the [sRGB color space](https://en.wikipedia.org/wiki/SRGB). Colors are JSON strings in a variety of permitted formats: HTML-style hex values, RGB, RGBA, HSL, and HSLA. Predefined HTML colors names, like `yellow` and `blue`, are also permitted.
-
+The `color` type is a color in the [sRGB color space](https://en.wikipedia.org/wiki/SRGB). Colors are JSON strings in a variety of permitted formats: HTML-style hex values, RGB, RGBA, HSL, and HSLA. Predefined HTML color names, such as `yellow`, `blue`, and `transparent`, are also permitted.
 ```json
 {
     "line-color": "#ff0",
@@ -120,9 +119,9 @@ Enums are a closed set of possible string values. Failing to provide a value wit
 An array of numbers with syntax similar to [CSS](https://developer.mozilla.org/en-US/docs/Web/CSS/padding):
 
 - A single value applies to all four sides, e.g. `[2]`;
-- two values apply to [top/bottom, left/right], e.g. `[2, 3]`;
-- three values apply to [top, left/right, bottom] e.g. `[2, 3, 1]`;
-- four values apply to [top, right, bottom, left], e.g. `[2, 3, 1, 0]`.
+- two values apply to `[top/bottom, left/right]`, e.g. `[2, 3]`;
+- three values apply to `[top, left/right, bottom]`, e.g. `[2, 3, 1]`;
+- four values apply to `[top, right, bottom, left]`, e.g. `[2, 3, 1, 0]`.
 
 A single number is accepted for backwards-compatibility, and treated the same as a one-element array — padding applied to all sides.
 
@@ -192,7 +191,7 @@ output at zoom 12.1: "mercator"
 ```
 
 
-#### Provide a `projection` 
+#### Provide a `projection`
 
 ```ts
 type: ["vertical-perspective", "mercator", 0.7]

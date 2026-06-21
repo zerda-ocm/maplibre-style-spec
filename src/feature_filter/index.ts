@@ -16,6 +16,11 @@ export type FeatureFilter = {
     getGlobalStateRefs: () => Set<string>;
 };
 
+type MixedFilterDiagnostic = {
+    path: Array<number>;
+    legacyFilter: Array<any>;
+};
+
 export function isExpressionFilter(filter: any): filter is ExpressionFilterSpecification {
     if (filter === true || filter === false) {
         return true;
@@ -29,11 +34,12 @@ export function isExpressionFilter(filter: any): filter is ExpressionFilterSpeci
             return filter.length >= 2 && filter[1] !== '$id' && filter[1] !== '$type';
 
         case 'in':
-            return filter.length >= 3 && (typeof filter[1] !== 'string' || Array.isArray(filter[2]));
+            return (
+                filter.length >= 3 && (typeof filter[1] !== 'string' || Array.isArray(filter[2]))
+            );
 
         case '!in':
         case '!has':
-        case 'none':
             return false;
 
         case '==':
@@ -42,30 +48,179 @@ export function isExpressionFilter(filter: any): filter is ExpressionFilterSpeci
         case '>=':
         case '<':
         case '<=':
-            return filter.length !== 3 || (Array.isArray(filter[1]) || Array.isArray(filter[2]));
+            return filter.length !== 3 || Array.isArray(filter[1]) || Array.isArray(filter[2]);
 
-        case 'any':
-        case 'all':
+        case 'none': {
             for (const f of filter.slice(1)) {
-                if (!isExpressionFilter(f) && typeof f !== 'boolean') {
-                    return false;
+                if (typeof f === 'boolean') continue;
+                if (isExpressionFilter(f)) {
+                    return true;
                 }
             }
-            return true;
+            return false;
+        }
+
+        case 'any':
+        case 'all': {
+            let hasLegacy = false;
+            for (const f of filter.slice(1)) {
+                if (typeof f === 'boolean') continue;
+                if (isExpressionFilter(f)) {
+                    // If any child is definitely an expression, treat the whole filter as an expression
+                    // that will go through extensive validation to surface mixed syntax issues.
+                    return true;
+                }
+                hasLegacy = true;
+            }
+            return !hasLegacy;
+        }
 
         default:
             return true;
     }
 }
 
+function getFilterPropertyExpression(property: string): unknown {
+    if (property === '$id') return ['id'];
+    return ['get', property];
+}
+
+function getLegacyFilterExpressionSuggestion(filter: Array<any>): unknown {
+    switch (filter[0]) {
+        case '==':
+        case '!=':
+        case '<':
+        case '<=':
+        case '>':
+        case '>=':
+            if (filter.length !== 3 || typeof filter[1] !== 'string') return null;
+            if (filter[1] === '$type') {
+                return [
+                    filter[0],
+                    ['in', ['geometry-type'], ['literal', [filter[2], `Multi${filter[2]}`]]]
+                ];
+            }
+            return [filter[0], getFilterPropertyExpression(filter[1]), filter[2]];
+
+        case 'in':
+        case '!in': {
+            if (filter.length < 2 || typeof filter[1] !== 'string') return null;
+            let expression = [
+                'in',
+                getFilterPropertyExpression(filter[1]),
+                ['literal', filter.slice(2)]
+            ];
+            if (filter[1] === '$type') {
+                expression = [
+                    'in',
+                    ['geometry-type'],
+                    [
+                        'literal',
+                        filter
+                            .slice(2)
+                            .map((g) => [g, `Multi${g}`])
+                            .flat()
+                    ]
+                ];
+            }
+
+            return filter[0] === '!in' ? ['!', expression] : expression;
+        }
+
+        case 'has':
+        case '!has': {
+            if (filter.length !== 2 || typeof filter[1] !== 'string') return null;
+            if (filter[1] === '$type' || filter[1] === '$id') return null;
+            const expression = ['has', filter[1]];
+            return filter[0] === '!has' ? ['!', expression] : expression;
+        }
+
+        default:
+            return null;
+    }
+}
+
+export function getMixedFilterErrorMessage(filter: Array<any>): string {
+    if (
+        (filter[0] === '<' || filter[0] === '<=' || filter[0] === '>' || filter[0] === '>=') &&
+        filter[1] === '$type'
+    ) {
+        return `"$type" cannot be use with operator "${filter[0]}"`;
+    }
+
+    const suggestion = getLegacyFilterExpressionSuggestion(filter);
+    if (suggestion) {
+        return `Mixing deprecated filter syntax with expression syntax is not supported. Replace ${JSON.stringify(filter)} with ${JSON.stringify(suggestion)}.`;
+    }
+
+    return `Mixing deprecated filter syntax with expression syntax is not supported. Convert ${JSON.stringify(filter)} to expression syntax.`;
+}
+
+function checkChild(
+    index: number,
+    path: Array<number>,
+    filter: unknown
+): MixedFilterDiagnostic | null {
+    const child = filter[index];
+    if (!Array.isArray(child)) {
+        return null;
+    }
+    if (!isExpressionFilter(child)) {
+        return {path: path.concat(index), legacyFilter: child};
+    }
+    return findMixedLegacyFilter(child, path.concat(index));
+}
+
+export function findMixedLegacyFilter(
+    filter: unknown,
+    path: Array<number> = []
+): MixedFilterDiagnostic | null {
+    if (!Array.isArray(filter) || filter.length < 1) {
+        return null;
+    }
+
+    switch (filter[0]) {
+        case 'all':
+        case 'any':
+        case 'none':
+            for (let i = 1; i < filter.length; i++) {
+                const diagnostic = checkChild(i, path, filter);
+                if (diagnostic) return diagnostic;
+            }
+            break;
+
+        case '!': {
+            const diagnostic = checkChild(1, path, filter);
+            if (diagnostic) return diagnostic;
+            break;
+        }
+
+        case 'case':
+            for (let i = 1; i < filter.length - 1; i += 2) {
+                const diagnostic = checkChild(i, path, filter);
+                if (diagnostic) return diagnostic;
+            }
+            break;
+    }
+
+    return null;
+}
+
+export function validateNoMixedExpressionFilter(filter: FilterSpecification) {
+    const diagnostic = findMixedLegacyFilter(filter);
+    if (diagnostic) {
+        throw new Error(getMixedFilterErrorMessage(diagnostic.legacyFilter));
+    }
+}
+
 const filterSpec = {
-    'type': 'boolean',
-    'default': false,
-    'transition': false,
+    type: 'boolean',
+    default: false,
+    transition: false,
     'property-type': 'data-driven',
-    'expression': {
-        'interpolated': false,
-        'parameters': ['zoom', 'feature']
+    expression: {
+        interpolated: false,
+        parameters: ['zoom', 'feature']
     }
 };
 
@@ -79,22 +234,38 @@ const filterSpec = {
  * @param [globalState] Global state object to be used for evaluating 'global-state' expressions
  * @returns filter-evaluating function
  */
-export function featureFilter(filter: FilterSpecification | void, globalState?: Record<string, any>): FeatureFilter {
+export function featureFilter(
+    filter: FilterSpecification | void,
+    globalState?: Record<string, any>
+): FeatureFilter {
     if (filter === null || filter === undefined) {
         return {filter: () => true, needGeometry: false, getGlobalStateRefs: () => new Set()};
     }
 
-    if (!isExpressionFilter(filter)) {
+    if (Array.isArray(filter) && filter[0] === 'none' && isExpressionFilter(filter)) {
+        validateNoMixedExpressionFilter(filter);
+        filter = convertFilter(filter as Array<any>) as ExpressionFilterSpecification;
+    } else if (!isExpressionFilter(filter)) {
         filter = convertFilter(filter) as ExpressionFilterSpecification;
+    } else {
+        validateNoMixedExpressionFilter(filter);
     }
 
-    const compiled = createExpression(filter, filterSpec as StylePropertySpecification, globalState);
+    const compiled = createExpression(
+        filter,
+        filterSpec as StylePropertySpecification,
+        globalState
+    );
     if (compiled.result === 'error') {
-        throw new Error(compiled.value.map(err => `${err.key}: ${err.message}`).join(', '));
+        throw new Error(compiled.value.map((err) => `${err.key}: ${err.message}`).join(', '));
     } else {
         const needGeometry = geometryNeeded(filter);
         return {
-            filter: (globalProperties: GlobalProperties, feature: Feature, canonical?: ICanonicalTileID) => compiled.value.evaluate(globalProperties, feature, {}, canonical),
+            filter: (
+                globalProperties: GlobalProperties,
+                feature: Feature,
+                canonical?: ICanonicalTileID
+            ) => compiled.value.evaluate(globalProperties, feature, {}, canonical),
             needGeometry,
             getGlobalStateRefs: () => findGlobalStateRefs(compiled.value.expression)
         };
@@ -118,22 +289,31 @@ function geometryNeeded(filter) {
 function convertFilter(filter?: Array<any> | null | void): unknown {
     if (!filter) return true;
     const op = filter[0];
-    if (filter.length <= 1) return (op !== 'any');
+    if (filter.length <= 1) return op !== 'any';
     const converted =
-        op === '==' ? convertComparisonOp(filter[1], filter[2], '==') :
-            op === '!=' ? convertNegation(convertComparisonOp(filter[1], filter[2], '==')) :
-                op === '<' ||
-        op === '>' ||
-        op === '<=' ||
-        op === '>=' ? convertComparisonOp(filter[1], filter[2], op) :
-                    op === 'any' ? convertDisjunctionOp(filter.slice(1)) :
-                        op === 'all' ? ['all' as unknown].concat(filter.slice(1).map(convertFilter)) :
-                            op === 'none' ? ['all' as unknown].concat(filter.slice(1).map(convertFilter).map(convertNegation)) :
-                                op === 'in' ? convertInOp(filter[1], filter.slice(2)) :
-                                    op === '!in' ? convertNegation(convertInOp(filter[1], filter.slice(2))) :
-                                        op === 'has' ? convertHasOp(filter[1]) :
-                                            op === '!has' ? convertNegation(convertHasOp(filter[1])) :
-                                                true;
+        op === '=='
+            ? convertComparisonOp(filter[1], filter[2], '==')
+            : op === '!='
+              ? convertNegation(convertComparisonOp(filter[1], filter[2], '=='))
+              : op === '<' || op === '>' || op === '<=' || op === '>='
+                ? convertComparisonOp(filter[1], filter[2], op)
+                : op === 'any'
+                  ? convertDisjunctionOp(filter.slice(1))
+                  : op === 'all'
+                    ? ['all' as unknown].concat(filter.slice(1).map(convertFilter))
+                    : op === 'none'
+                      ? ['all' as unknown].concat(
+                            filter.slice(1).map(convertFilter).map(convertNegation)
+                        )
+                      : op === 'in'
+                        ? convertInOp(filter[1], filter.slice(2))
+                        : op === '!in'
+                          ? convertNegation(convertInOp(filter[1], filter.slice(2)))
+                          : op === 'has'
+                            ? convertHasOp(filter[1])
+                            : op === '!has'
+                              ? convertNegation(convertHasOp(filter[1]))
+                              : true;
     return converted;
 }
 
@@ -153,14 +333,16 @@ function convertDisjunctionOp(filters: Array<Array<any>>) {
 }
 
 function convertInOp(property: string, values: Array<any>) {
-    if (values.length === 0) { return false; }
+    if (values.length === 0) {
+        return false;
+    }
     switch (property) {
         case '$type':
             return ['filter-type-in', ['literal', values]];
         case '$id':
             return ['filter-id-in', ['literal', values]];
         default:
-            if (values.length > 200 && !values.some(v => typeof v !== typeof values[0])) {
+            if (values.length > 200 && !values.some((v) => typeof v !== typeof values[0])) {
                 return ['filter-in-large', property, ['literal', values.sort(compare)]];
             } else {
                 return ['filter-in-small', property, ['literal', values]];

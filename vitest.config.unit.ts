@@ -4,22 +4,18 @@ export default defineConfig({
     test: {
         name: 'unit',
         environment: 'node',
+        restoreMocks: true,
         typecheck: {
             enabled: true,
-            include: [
-                'src/**/*.test-d.ts',
-            ],
+            include: ['src/**/*.test-d.ts']
         },
-        include: [
-            'src/**/*.test.{ts,js}'
-        ],
+        include: ['src/**/*.test.{ts,js}'],
         coverage: {
             provider: 'v8',
             reporter: ['json', 'html'],
-            exclude: ['node_modules/', 'dist/', '**/*.{test,test-d}.ts'],
-            all: true,
+            exclude: ['node_modules/', 'dist/', '**/*.{test,test-d}.ts', 'README.md'],
             include: ['src'],
-            reportsDirectory: './coverage/vitest/unit',
-        },
-    },
-}); 
+            reportsDirectory: './coverage/vitest/unit'
+        }
+    }
+});
